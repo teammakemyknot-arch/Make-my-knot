@@ -47,7 +47,7 @@ const generateMatches = (userProfile: any) => [
 ]
 
 export default function Dashboard() {
-  const { user, isAuthenticated, logout, getUserQuestionnaireResponse, isLoading } = useUser()
+  const { user, isAuthenticated, logout, getUserQuestionnaireResponse, isLoading, updateUser } = useUser()
   const [matches, setMatches] = useState<any[]>([])
   const [activeTab, setActiveTab] = useState<'overview' | 'matches' | 'conversations' | 'profile'>('overview')
   const router = useRouter()
@@ -95,6 +95,23 @@ export default function Dashboard() {
 
   const questionnaireResponse = getUserQuestionnaireResponse()
   const needsQuestionnaire = !user.questionnaireComplete
+
+  // Subscription helpers
+  const now = new Date()
+  const trialActive = user.subscription?.plan === 'trial' && user.subscription?.trialEndsAt ? new Date(user.subscription.trialEndsAt) > now : false
+  const trialDaysLeft = trialActive && user.subscription?.trialEndsAt ? Math.ceil((new Date(user.subscription.trialEndsAt).getTime() - now.getTime()) / (1000*60*60*24)) : 0
+  const isMonthly = user.subscription?.plan === 'monthly'
+
+  const startFreeTrial = () => {
+    const started = new Date()
+    const ends = new Date(started.getTime() + 7*24*60*60*1000)
+    updateUser({ subscription: { plan: 'trial', trialStartedAt: started.toISOString(), trialEndsAt: ends.toISOString() } })
+  }
+
+  const subscribeMonthly = () => {
+    const started = new Date()
+    updateUser({ subscription: { plan: 'monthly', startedAt: started.toISOString() } })
+  }
 
   return (
     <>
@@ -212,6 +229,28 @@ export default function Dashboard() {
                   <div className="text-2xl font-bold text-gray-900 mb-1">0</div>
                   <div className="text-sm text-gray-600">Mutual Interests</div>
                 </div>
+              </div>
+
+              {/* Subscription Card */}
+              <div className="bg-white rounded-xl p-6 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Your Plan</h3>
+                {isMonthly ? (
+                  <p className="text-gray-700">You are subscribed to the Monthly plan. Thank you! 💖</p>
+                ) : trialActive ? (
+                  <div>
+                    <p className="text-gray-700 mb-3">Your 7-day free features are active.</p>
+                    <p className="text-gray-600 mb-4">Days remaining: <span className="font-semibold">{trialDaysLeft}</span></p>
+                    <button onClick={subscribeMonthly} className="btn-gold">Upgrade to Monthly</button>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-gray-700 mb-4">Start your 7-day free features. Cancel anytime.</p>
+                    <div className="flex gap-3">
+                      <button onClick={startFreeTrial} className="btn-primary">Start Free Trial</button>
+                      <button onClick={subscribeMonthly} className="btn-secondary">Subscribe Monthly</button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Quick Actions */}

@@ -16,6 +16,13 @@ export interface User {
   communicationStyle: 'chat' | 'call'
   profileComplete: boolean
   questionnaireComplete: boolean
+  isVerified?: boolean
+  subscription?: {
+    plan: 'trial' | 'monthly' | null
+    trialStartedAt?: string
+    trialEndsAt?: string
+    startedAt?: string
+  }
   createdAt: string
 }
 
@@ -102,7 +109,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         return false
       }
 
-      const newUser: User = {
+const newUser: User = {
         id: Date.now().toString(),
         email: userData.email || '',
         name: userData.name || '',
@@ -118,6 +125,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
         communicationStyle: userData.communicationStyle || 'chat',
         profileComplete: false,
         questionnaireComplete: false,
+        isVerified: false,
+        subscription: { plan: null },
         createdAt: new Date().toISOString()
       }
 

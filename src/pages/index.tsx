@@ -3,6 +3,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Heart, Users, MessageCircle, CheckCircle, Star, ArrowRight } from 'lucide-react'
 import Footer from '@/components/Footer'
+import LeadQuestionnaire from '@/components/LeadQuestionnaire'
 
 export default function Home() {
   return (
@@ -108,6 +109,29 @@ export default function Home() {
                     <MessageCircle className="h-6 w-6 text-primary-600" />
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Mini Lead Questionnaire Section */}
+        <section className="py-16 bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid lg:grid-cols-2 gap-12 items-center">
+              <div>
+                <h2 className="text-4xl font-bold text-gray-900 mb-4">Start free today</h2>
+                <p className="text-lg text-gray-600 mb-6">Answer a few quick questions and we'll reach out with handpicked, compatible matches.</p>
+                <ul className="text-gray-700 space-y-2 list-disc list-inside">
+                  <li>No credit card required</li>
+                  <li>3-5 curated matches weekly</li>
+                  <li>7-day free features, then flexible monthly subscription</li>
+                </ul>
+              </div>
+              <div>
+                {/* @ts-expect-error Server bundle import */}
+                {/* Lead questionnaire client component */}
+                {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+                <LeadQuestionnaire />
               </div>
             </div>
           </div>
