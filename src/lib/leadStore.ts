@@ -7,6 +7,7 @@ export interface Lead {
   phone: string
   answers: Record<string, any>
   status: 'new' | 'verified' | 'deleted'
+  syncedAt?: string
 }
 
 const LEADS_KEY = 'makemyknot_leads'
