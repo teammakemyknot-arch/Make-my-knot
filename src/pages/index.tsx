@@ -49,13 +49,13 @@ export default function Home() {
                 </p>
                 
                 <div className="flex flex-col sm:flex-row gap-4 mb-8">
-                  <button className="btn-primary text-lg px-8 py-4">
+                  <Link href="/signup" className="btn-primary text-lg px-8 py-4 inline-flex items-center justify-center">
                     Start Your Journey
                     <ArrowRight className="ml-2 h-5 w-5" />
-                  </button>
-                  <button className="btn-secondary text-lg px-8 py-4">
+                  </Link>
+                  <a href="#how-it-works" className="btn-secondary text-lg px-8 py-4 inline-flex items-center justify-center">
                     Learn More
-                  </button>
+                  </a>
                 </div>
 
                 {/* Trust Indicators */}
@@ -193,10 +193,10 @@ export default function Home() {
             <p className="text-xl text-primary-100 mb-8">
               Join thousands of people who have found meaningful relationships through our personalized matchmaking service.
             </p>
-            <button className="btn-gold text-lg px-8 py-4">
+            <Link href="/signup" className="btn-gold text-lg px-8 py-4 inline-flex items-center justify-center">
               Start Your Journey Today
               <ArrowRight className="ml-2 h-5 w-5" />
-            </button>
+            </Link>
           </div>
         </section>
       </main>
