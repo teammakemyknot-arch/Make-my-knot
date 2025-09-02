@@ -1,4 +1,5 @@
 import Head from 'next/head'
+import Link from 'next/link'
 import Image from 'next/image'
 import { Heart, Users, MessageCircle, CheckCircle, Star, ArrowRight } from 'lucide-react'
 import Footer from '@/components/Footer'
@@ -25,8 +26,8 @@ export default function Home() {
               <div className="hidden md:flex items-center space-x-8">
                 <a href="#how-it-works" className="text-gray-700 hover:text-primary-600 transition-colors">How It Works</a>
                 <a href="#testimonials" className="text-gray-700 hover:text-primary-600 transition-colors">Success Stories</a>
-                <button className="btn-secondary text-sm">Sign In</button>
-                <button className="btn-primary text-sm">Get Started</button>
+                <Link href="/login" className="btn-secondary text-sm">Sign In</Link>
+                <Link href="/signup" className="btn-primary text-sm">Get Started</Link>
               </div>
             </div>
           </div>
