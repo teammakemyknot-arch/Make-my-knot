@@ -540,7 +540,7 @@ export default function EnhancedAdminDashboard() {
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-sm text-gray-600">API Response</span>
-                      <span className="text-sm text-gray-700">< 200ms</span>
+                      <span className="text-sm text-gray-700">&lt; 200ms</span>
                     </div>
                   </div>
                 </div>
