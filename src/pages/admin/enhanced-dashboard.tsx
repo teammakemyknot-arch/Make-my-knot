@@ -355,7 +355,8 @@ export default function EnhancedAdminDashboard() {
     }
     
     return (
-      <span className={`px-2 py-1 text-xs font-medium rounded-full ${colors[type][status] || 'bg-gray-100 text-gray-800'}`}>
+      <span className={`px-2 py-1 text-xs font-medium rounded-full ${(colors as any)[type]?.[status] || 'bg-gray-100 text-gray-800'}`}>
+
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </span>
     )
