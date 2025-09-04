@@ -1127,13 +1127,17 @@ function CRMLeadsTab() {
 
 // Matchmaking Control Tab
 function MatchmakingTab() {
-  const [users, setUsers] = useState<any[]>([])
-  
+  const [users, setUsers] = useState<UserProfile[]>([])
+
   useEffect(() => {
-    const raw = JSON.parse(localStorage.getItem('makemyknot_users')||'[]')
-    const sanitized = raw.map((u:any)=>{ const {password, ...rest} = u; return rest })
-    setUsers(sanitized.filter(u => u.questionnaireComplete))
-  }, [])
+  const raw = JSON.parse(localStorage.getItem('makemyknot_users') || '[]')
+  const sanitized = raw.map((u: any) => {
+    const { password, ...rest } = u
+    return rest
+  })
+  setUsers(sanitized.filter((u: any) => u.questionnaire?.completed))
+}, [])
+
 
   const handleManualMatch = (userId: string, targetUserId: string) => {
     sendNotification(userId, `We found a special match for you! Check your matches tab.`, 'success')
