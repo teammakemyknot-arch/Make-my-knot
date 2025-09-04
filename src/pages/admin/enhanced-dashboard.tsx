@@ -1,3 +1,5 @@
+'use client';
+
 export default function EnhancedAdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'messages' | 'offers' | 'webinars' | 'analytics' | 'roles'>('overview')
