@@ -200,7 +200,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
       const apiResponse = await apiService.saveQuestionnaireResponse({
         responses: response.responses,
         compatibilityProfile: response.compatibilityProfile,
-        completionTime: response.completionTime || 0,
+        completionTime: (response as any).completionTime || 0,
+
         questionnaire: {
           type: 'basic',
           version: '1.0',
