@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { apiService } from './api'
 
 export interface User {
   id: string
@@ -46,8 +47,9 @@ interface UserContextType {
   signup: (userData: Partial<User> & { password: string }) => Promise<boolean>
   logout: () => void
   updateUser: (updates: Partial<User>) => void
-  saveQuestionnaireResponse: (response: QuestionnaireResponse) => void
-  getUserQuestionnaireResponse: () => QuestionnaireResponse | null
+  saveQuestionnaireResponse: (response: QuestionnaireResponse) => Promise<void>
+  getUserQuestionnaireResponse: () => Promise<QuestionnaireResponse | null>
+  getCompatibilityMatches: (minCompatibility?: number, limit?: number) => Promise<any[]>
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined)
@@ -58,35 +60,46 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Check for existing session on app load
-    const savedUser = localStorage.getItem('makemyknot_user')
-    if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser))
-      } catch (error) {
-        console.error('Error parsing saved user data:', error)
-        localStorage.removeItem('makemyknot_user')
+    const initializeAuth = async () => {
+      const token = localStorage.getItem('makemyknot_token')
+      const savedUser = localStorage.getItem('makemyknot_user')
+      
+      if (token && savedUser) {
+        try {
+          // Verify token is still valid by fetching current user
+          const response = await apiService.getMe()
+          if (response.status === 'success' && response.user) {
+            setUser(response.user)
+            localStorage.setItem('makemyknot_user', JSON.stringify(response.user))
+          } else {
+            // Token invalid, clear storage
+            localStorage.removeItem('makemyknot_token')
+            localStorage.removeItem('makemyknot_user')
+          }
+        } catch (error) {
+          console.error('Error validating session:', error)
+          localStorage.removeItem('makemyknot_token')
+          localStorage.removeItem('makemyknot_user')
+        }
       }
+      setIsLoading(false)
     }
-    setIsLoading(false)
+    
+    initializeAuth()
   }, [])
 
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true)
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      const response = await apiService.login({ email, password })
       
-      // Check if user exists in localStorage
-      const users = JSON.parse(localStorage.getItem('makemyknot_users') || '[]')
-      const existingUser = users.find((u: any) => u.email === email && u.password === password)
-      
-      if (existingUser) {
-        const { password: _, ...userWithoutPassword } = existingUser
-        setUser(userWithoutPassword)
-        localStorage.setItem('makemyknot_user', JSON.stringify(userWithoutPassword))
+      if (response.status === 'success' && response.user) {
+        setUser(response.user)
+        console.log('Login successful for:', response.user.email)
         return true
       }
       
+      console.log('Login failed:', response.message)
       return false
     } catch (error) {
       console.error('Login error:', error)
@@ -99,47 +112,50 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const signup = async (userData: Partial<User> & { password: string }): Promise<boolean> => {
     setIsLoading(true)
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      const users = JSON.parse(localStorage.getItem('makemyknot_users') || '[]')
-      
-      // Check if user already exists
-      if (users.some((u: any) => u.email === userData.email)) {
-        return false
-      }
-
-const newUser: User = {
-        id: Date.now().toString(),
+      // Convert user data to match API expectations
+      const apiUserData = {
+        firstName: userData.name?.split(' ')[0] || '',
+        lastName: userData.name?.split(' ').slice(1).join(' ') || '',
         email: userData.email || '',
-        name: userData.name || '',
-        age: userData.age || 0,
-        phone: userData.phone || '',
-        location: userData.location || '',
-        education: userData.education || '',
-        profession: userData.profession || '',
-        bio: userData.bio || '',
-        interests: userData.interests || [],
-        values: userData.values || '',
-        partnerPreferences: userData.partnerPreferences || '',
-        communicationStyle: userData.communicationStyle || 'chat',
-        profileComplete: false,
-        questionnaireComplete: false,
-        isVerified: false,
-        subscription: { plan: null },
-        createdAt: new Date().toISOString()
+        password: userData.password,
+        confirmPassword: userData.password,
+        dateOfBirth: new Date(Date.now() - (userData.age || 25) * 365.25 * 24 * 60 * 60 * 1000).toISOString(),
+        phoneNumber: userData.phone,
+        agreeToTerms: true
       }
-
-      // Save user with password for login
-      const userWithPassword = { ...newUser, password: userData.password }
-      users.push(userWithPassword)
-      localStorage.setItem('makemyknot_users', JSON.stringify(users))
       
-      // Set current user (without password)
-      setUser(newUser)
-      localStorage.setItem('makemyknot_user', JSON.stringify(newUser))
+      const response = await apiService.register(apiUserData)
       
-      return true
+      if (response.status === 'success' && response.user) {
+        // Convert API user back to our User interface
+        const convertedUser: User = {
+          id: response.user._id || response.user.id,
+          email: response.user.email,
+          name: `${response.user.firstName} ${response.user.lastName}`,
+          age: response.user.age || 0,
+          phone: response.user.phoneNumber || '',
+          location: response.user.location?.city || '',
+          education: response.user.preferences?.education || '',
+          profession: response.user.preferences?.occupation || '',
+          bio: response.user.bio || '',
+          interests: response.user.preferences?.interests || [],
+          values: userData.values || '',
+          partnerPreferences: userData.partnerPreferences || '',
+          communicationStyle: 'chat',
+          profileComplete: false,
+          questionnaireComplete: false,
+          isVerified: response.user.verification?.isEmailVerified || false,
+          subscription: { plan: null },
+          createdAt: response.user.createdAt || new Date().toISOString()
+        }
+        
+        setUser(convertedUser)
+        console.log('Signup successful for:', convertedUser.email)
+        return true
+      }
+      
+      console.log('Signup failed:', response.message)
+      return false
     } catch (error) {
       console.error('Signup error:', error)
       return false
@@ -148,48 +164,109 @@ const newUser: User = {
     }
   }
 
-  const logout = () => {
-    setUser(null)
-    localStorage.removeItem('makemyknot_user')
+  const logout = async () => {
+    try {
+      await apiService.logout()
+    } catch (error) {
+      console.error('Logout error:', error)
+    } finally {
+      setUser(null)
+    }
   }
 
-  const updateUser = (updates: Partial<User>) => {
+  const updateUser = async (updates: Partial<User>) => {
     if (user) {
-      const updatedUser = { ...user, ...updates }
-      setUser(updatedUser)
-      localStorage.setItem('makemyknot_user', JSON.stringify(updatedUser))
-      
-      // Also update in the users array
-      const users = JSON.parse(localStorage.getItem('makemyknot_users') || '[]')
-      const userIndex = users.findIndex((u: any) => u.id === user.id)
-      if (userIndex !== -1) {
-        users[userIndex] = { ...users[userIndex], ...updates }
-        localStorage.setItem('makemyknot_users', JSON.stringify(users))
+      try {
+        const response = await apiService.updateProfile(updates)
+        if (response.status === 'success' && response.user) {
+          const updatedUser = { ...user, ...updates }
+          setUser(updatedUser)
+          localStorage.setItem('makemyknot_user', JSON.stringify(updatedUser))
+        }
+      } catch (error) {
+        console.error('Update user error:', error)
+        // Still update locally on error for better UX
+        const updatedUser = { ...user, ...updates }
+        setUser(updatedUser)
+        localStorage.setItem('makemyknot_user', JSON.stringify(updatedUser))
       }
     }
   }
 
-  const saveQuestionnaireResponse = (response: QuestionnaireResponse) => {
-    const responses = JSON.parse(localStorage.getItem('makemyknot_questionnaires') || '[]')
-    const existingIndex = responses.findIndex((r: any) => r.userId === response.userId)
+  const saveQuestionnaireResponse = async (response: QuestionnaireResponse) => {
+    if (!user) return
     
-    if (existingIndex !== -1) {
-      responses[existingIndex] = response
-    } else {
-      responses.push(response)
+    try {
+      const apiResponse = await apiService.saveQuestionnaireResponse({
+        responses: response.responses,
+        compatibilityProfile: response.compatibilityProfile,
+        completionTime: response.completionTime || 0,
+        questionnaire: {
+          type: 'basic',
+          version: '1.0',
+          language: 'en'
+        }
+      })
+      
+      if (apiResponse.status === 'success') {
+        // Mark questionnaire as complete
+        updateUser({ questionnaireComplete: true })
+      }
+    } catch (error) {
+      console.error('Error saving questionnaire response:', error)
+      // Fallback to localStorage if API fails
+      const responses = JSON.parse(localStorage.getItem('makemyknot_questionnaires') || '[]')
+      const existingIndex = responses.findIndex((r: any) => r.userId === response.userId)
+      
+      if (existingIndex !== -1) {
+        responses[existingIndex] = response
+      } else {
+        responses.push(response)
+      }
+      
+      localStorage.setItem('makemyknot_questionnaires', JSON.stringify(responses))
+      updateUser({ questionnaireComplete: true })
     }
-    
-    localStorage.setItem('makemyknot_questionnaires', JSON.stringify(responses))
-    
-    // Mark questionnaire as complete
-    updateUser({ questionnaireComplete: true })
   }
 
-  const getUserQuestionnaireResponse = (): QuestionnaireResponse | null => {
+  const getUserQuestionnaireResponse = async (): Promise<QuestionnaireResponse | null> => {
     if (!user) return null
     
-    const responses = JSON.parse(localStorage.getItem('makemyknot_questionnaires') || '[]')
-    return responses.find((r: any) => r.userId === user.id) || null
+    try {
+      const response = await apiService.getUserQuestionnaireResponse()
+      if (response.status === 'success' && response.data.response) {
+        const questionnaire = response.data.response
+        return {
+          userId: user.id,
+          responses: questionnaire.responses,
+          compatibilityProfile: questionnaire.compatibilityProfile,
+          completedAt: questionnaire.createdAt,
+          completionTime: questionnaire.completionTime
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching questionnaire response:', error)
+      // Fallback to localStorage
+      const responses = JSON.parse(localStorage.getItem('makemyknot_questionnaires') || '[]')
+      return responses.find((r: any) => r.userId === user.id) || null
+    }
+    
+    return null
+  }
+  
+  const getCompatibilityMatches = async (minCompatibility = 70, limit = 10): Promise<any[]> => {
+    if (!user) return []
+    
+    try {
+      const response = await apiService.getCompatibilityMatches(minCompatibility, limit)
+      if (response.status === 'success') {
+        return response.data.matches || []
+      }
+    } catch (error) {
+      console.error('Error fetching compatibility matches:', error)
+    }
+    
+    return []
   }
 
   const value = {
@@ -201,7 +278,8 @@ const newUser: User = {
     logout,
     updateUser,
     saveQuestionnaireResponse,
-    getUserQuestionnaireResponse
+    getUserQuestionnaireResponse,
+    getCompatibilityMatches
   }
 
   return (

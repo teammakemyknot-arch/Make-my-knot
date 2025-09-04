@@ -29,7 +29,7 @@ export default function LeadQuestionnaire({ onSubmitted }: Props) {
 
   const handleNextFromInput = () => {
     if (!answers[current.id]) return
-    if (step < steps.length - 1) setStep(step + 1)
+    setStep(step + 1)
   }
 
   const canSubmitContact = contact.name && contact.email && contact.phone
