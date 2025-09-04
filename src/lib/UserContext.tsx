@@ -37,6 +37,7 @@ export interface QuestionnaireResponse {
     personality: number[]
   }
   completedAt: string
+  completionTime?: number   // ✅ added this
 }
 
 interface UserContextType {
@@ -59,20 +60,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Check for existing session on app load
     const initializeAuth = async () => {
       const token = localStorage.getItem('makemyknot_token')
       const savedUser = localStorage.getItem('makemyknot_user')
       
       if (token && savedUser) {
         try {
-          // Verify token is still valid by fetching current user
           const response = await apiService.getMe()
           if (response.status === 'success' && response.user) {
             setUser(response.user)
             localStorage.setItem('makemyknot_user', JSON.stringify(response.user))
           } else {
-            // Token invalid, clear storage
             localStorage.removeItem('makemyknot_token')
             localStorage.removeItem('makemyknot_user')
           }
@@ -92,13 +90,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setIsLoading(true)
     try {
       const response = await apiService.login({ email, password })
-      
       if (response.status === 'success' && response.user) {
         setUser(response.user)
         console.log('Login successful for:', response.user.email)
         return true
       }
-      
       console.log('Login failed:', response.message)
       return false
     } catch (error) {
@@ -112,7 +108,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const signup = async (userData: Partial<User> & { password: string }): Promise<boolean> => {
     setIsLoading(true)
     try {
-      // Convert user data to match API expectations
       const apiUserData = {
         firstName: userData.name?.split(' ')[0] || '',
         lastName: userData.name?.split(' ').slice(1).join(' ') || '',
@@ -127,7 +122,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
       const response = await apiService.register(apiUserData)
       
       if (response.status === 'success' && response.user) {
-        // Convert API user back to our User interface
         const convertedUser: User = {
           id: response.user._id || response.user.id,
           email: response.user.email,
@@ -148,12 +142,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
           subscription: { plan: null },
           createdAt: response.user.createdAt || new Date().toISOString()
         }
-        
         setUser(convertedUser)
         console.log('Signup successful for:', convertedUser.email)
         return true
       }
-      
       console.log('Signup failed:', response.message)
       return false
     } catch (error) {
@@ -185,7 +177,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
         }
       } catch (error) {
         console.error('Update user error:', error)
-        // Still update locally on error for better UX
         const updatedUser = { ...user, ...updates }
         setUser(updatedUser)
         localStorage.setItem('makemyknot_user', JSON.stringify(updatedUser))
@@ -200,8 +191,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       const apiResponse = await apiService.saveQuestionnaireResponse({
         responses: response.responses,
         compatibilityProfile: response.compatibilityProfile,
-        completionTime: (response as any).completionTime || 0,
-
+        completionTime: response.completionTime || 0,   // ✅ now typesafe
         questionnaire: {
           type: 'basic',
           version: '1.0',
@@ -210,21 +200,17 @@ export function UserProvider({ children }: { children: ReactNode }) {
       })
       
       if (apiResponse.status === 'success') {
-        // Mark questionnaire as complete
         updateUser({ questionnaireComplete: true })
       }
     } catch (error) {
       console.error('Error saving questionnaire response:', error)
-      // Fallback to localStorage if API fails
       const responses = JSON.parse(localStorage.getItem('makemyknot_questionnaires') || '[]')
       const existingIndex = responses.findIndex((r: any) => r.userId === response.userId)
-      
       if (existingIndex !== -1) {
         responses[existingIndex] = response
       } else {
         responses.push(response)
       }
-      
       localStorage.setItem('makemyknot_questionnaires', JSON.stringify(responses))
       updateUser({ questionnaireComplete: true })
     }
@@ -232,7 +218,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const getUserQuestionnaireResponse = async (): Promise<QuestionnaireResponse | null> => {
     if (!user) return null
-    
     try {
       const response = await apiService.getUserQuestionnaireResponse()
       if (response.status === 'success' && response.data.response) {
@@ -242,22 +227,19 @@ export function UserProvider({ children }: { children: ReactNode }) {
           responses: questionnaire.responses,
           compatibilityProfile: questionnaire.compatibilityProfile,
           completedAt: questionnaire.createdAt,
-          completionTime: questionnaire.completionTime
+          completionTime: questionnaire.completionTime   // ✅ safe now
         }
       }
     } catch (error) {
       console.error('Error fetching questionnaire response:', error)
-      // Fallback to localStorage
       const responses = JSON.parse(localStorage.getItem('makemyknot_questionnaires') || '[]')
       return responses.find((r: any) => r.userId === user.id) || null
     }
-    
     return null
   }
   
   const getCompatibilityMatches = async (minCompatibility = 70, limit = 10): Promise<any[]> => {
     if (!user) return []
-    
     try {
       const response = await apiService.getCompatibilityMatches(minCompatibility, limit)
       if (response.status === 'success') {
@@ -266,7 +248,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Error fetching compatibility matches:', error)
     }
-    
     return []
   }
 
